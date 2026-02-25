@@ -1,8 +1,9 @@
 import * as React from 'react'
-import { Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { useSignUp } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 
 export default function SignUpScreen() {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -81,8 +82,50 @@ export default function SignUpScreen() {
   }
 
   return (
-    <SafeAreaView>
-      <>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+
+       <View className='flex-1 px-6'>
+        {/* Main*/}
+          <View className='flex-1 justify-center'>
+          {/* Logo branding */}
+            <View className='items-center mb-8'>
+              <View className='w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl items-center justify-center mb-4 shadow-lg'>
+                <Ionicons name = "fitness" size={40} color="white"/>
+              </View>
+              <Text className='text-3xl text-gray-600 text-center'>Join FitTracker</Text>
+              <Text className='text-lg text-gray-600 text-center'>Start Your fitness journey {"\n"} and achieve your goals with us!
+              </Text>
+          </View>
+
+          {/* Sign-up form */}
+          <View className='bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6'>
+              <Text className='text-2xl font-bold  text-gray-900 mb-6 text-center'>
+                Create an account
+                </Text>
+
+                {/* Email input */}
+                <View className='mb-4'>
+                  <Text className='text-sm font-medium
+                  text-gray-700 mb-2'>Email Address</Text>
+                  <View className='flex-row items-center bg-gray-50 rounded-xl px-4 py-4 border border-gray-200'></View>
+                  <Ionicons className="mail-outline" size={20} color="#6B7280"/>
+                  <TextInput
+                    autoCapitalize="none"
+                    value={emailAddress}
+                    placeholder="Enter email"
+                    onChangeText={(email) => setEmailAddress(email)}
+                    className='border border-gray-900 flex-1 ml-3'
+                    />
+                </View>
+          </View>
+        </View>
+        
+        {/*Footer*/}
+        
+       </View>
+
+
         <Text>Sign up</Text>
         <TextInput
           autoCapitalize="none"
@@ -105,7 +148,7 @@ export default function SignUpScreen() {
             <Text>Sign in</Text>
           </Link>
         </View>
-      </>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
