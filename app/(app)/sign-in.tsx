@@ -22,6 +22,8 @@ export default function Page() {
       return
     }
 
+    setisLoading(true)
+
     // Start the sign-in process using the email and password provided
     try {
       const signInAttempt = await signIn.create({
@@ -43,6 +45,8 @@ export default function Page() {
       // See https://clerk.com/docs/custom-flows/error-handling
       // for more info on error handling
       console.error(JSON.stringify(err, null, 2))
+    } finally{
+      setisLoading(false)
     }
   }
 
