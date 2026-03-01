@@ -1,20 +1,24 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { SafeAreaView} from 'react-native-safe-area-context'
 import { FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View, } from 'react-native'
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router'
 import { defineQuery } from 'groq'
 import { client } from '@/src/lib/sanity/client'
-import { ExerciseCard } from '@/app/components/ExerciseCard'
+import ExerciseCard from '@/app/components/ExerciseCard'
+import { Exercise } from '@/sanity/sanity.types';
+import exercise from '@/sanity/schemaTypes/exercise';
 
 export const exercisesQuery = defineQuery(`*[_type == "exercise"]{
-  }`
-)
+  _id,
+  title,
+  description
+}`)
 
 export default function Exercises() {
   const [searchQuery, setSearchQuery] = useState('')
   const [exercises, setExercises] = useState<Exercise[]>([])
-  const [filteredExercises, setFilteredExercises] = useState([])
+  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([])
   const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
 
@@ -28,7 +32,19 @@ export default function Exercises() {
     } catch (error) {
       console.error('Error fetching exercises:', error)
     }
-  }
+  };
+
+  useEffect(() => {
+    fetchExercises();
+  }, []);
+
+  // useEffect(() => {
+  //   const filtered = exercises.filter((exercise: Exercise) => 
+  //     exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
+  //   );
+  //   setFilteredExercises(filtered);
+  // }, [searchQuery, exercises])
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchExercises();
@@ -62,13 +78,13 @@ export default function Exercises() {
 
       {/*Exercises list section*/}
       <FlatList
-        data={[]}
+        data={filteredExercises}
         keyExtractor={(item) => item._id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 24 }}
         renderItem={({item}) => (
           <ExerciseCard item = {item}
-          onPress={() => router.push(`/exercise-detail?id=${item._id}`)}
+          onPress={() => router.push(`/exercise-detail/${item._id}`)}
           />
         )}
         refreshControl={
