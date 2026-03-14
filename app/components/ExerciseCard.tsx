@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity } from 'react-native'
 import React from 'react'
 import { Exercise } from '@/sanity/sanity.types';
+import { Image } from 'react-native';
 
 const getDifficulyColor = (difficulty: string) => {
     switch(difficulty){
@@ -42,6 +43,23 @@ export default function ExerciseCard({
   return (
     <TouchableOpacity className='bg-white rounded-2xl mb-4 shadow-sm border border-gray-100'
         onPress={onPress}>
+            <View className='flex-row p-6'>
+                <View className='w-20 h-20 bg-white rounded-xl mr-4 overflow-hidden'>
+                    {item.image?(
+                        <Image
+                          source = {{ uri: urlFor(item.image?.asset?._ref).url()}}
+                          className = "w-full h-full"
+                          resizeMode = "contain"
+                        />
+                    ):(
+                        <View className='"w-full h-full bg-gradient-to-br from-blue-400, to purple-500 item-center justify-center"
+                        />
+                        <Iconicons name = "fitness" size= {24}
+                    )}
+
+                </View>
+
+            </View>
       <Text>ExerciseCard</Text>
     </TouchableOpacity>
   );

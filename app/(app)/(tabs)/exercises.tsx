@@ -5,9 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router'
 import { defineQuery } from 'groq'
 import { client } from '@/src/lib/sanity/client'
-import ExerciseCard from '@/app/components/ExerciseCard'
+import ExerciseCard from '../../components/ExerciseCard'
 import { Exercise } from '@/sanity/sanity.types';
-import exercise from '@/sanity/schemaTypes/exercise';
 
 export const exercisesQuery = defineQuery(`*[_type == "exercise"]{
   _id,
@@ -23,16 +22,16 @@ export default function Exercises() {
   const [refreshing, setRefreshing] = useState(false)
 
   const fetchExercises = async () => {
-    try {
-      //fetch data from sanity
+  try {
+    const exercises = await client.fetch(exercisesQuery);
 
-      const exercises = await client.fetch(exercisesQuery);
-      setExercises(exercises)
-      setFilteredExercises(exercises)
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-    }
-  };
+    setExercises(exercises);
+    setFilteredExercises(exercises);
+
+  } catch (error) {
+    console.error('Error fetching exercises:', error);
+  }
+};
 
   useEffect(() => {
     fetchExercises();
@@ -84,7 +83,7 @@ export default function Exercises() {
         contentContainerStyle={{ padding: 24 }}
         renderItem={({item}) => (
           <ExerciseCard item = {item}
-          onPress={() => router.push(`/exercise-detail/${item._id}`)}
+          onPress={() => router.push({ pathname: '(app)/exercise-detail', query: { id: item._id } })}
           />
         )}
         refreshControl={
