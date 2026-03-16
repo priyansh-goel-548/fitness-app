@@ -37,12 +37,12 @@ export default function Exercises() {
     fetchExercises();
   }, []);
 
-  // useEffect(() => {
-  //   const filtered = exercises.filter((exercise: Exercise) => 
-  //     exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
-  //   );
-  //   setFilteredExercises(filtered);
-  // }, [searchQuery, exercises])
+  useEffect(() => {
+    const filtered = exercises.filter((exercise: Exercise) => 
+      (exercise as any)?.title?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredExercises(filtered);
+  }, [searchQuery, exercises])
 
   const onRefresh = async () => {
     setRefreshing(true);

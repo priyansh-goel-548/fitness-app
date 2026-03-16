@@ -2,8 +2,10 @@ import { View, Text, TouchableOpacity } from 'react-native'
 import React from 'react'
 import { Exercise } from '@/sanity/sanity.types';
 import { Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { urlFor } from '../../src/lib/sanity/client';
 
-const getDifficulyColor = (difficulty: string) => {
+const getDifficulyColor = (difficulty:string) => {
     switch(difficulty){
         case "beginner":
             return "bg-green-500";
@@ -11,7 +13,7 @@ const getDifficulyColor = (difficulty: string) => {
             return "bg-yellow-500";
         case "advanced":
             return "bg-red-500";
-        case "beginner":
+        default:
             return "bg-gray-500";
     }
 };
@@ -45,20 +47,42 @@ export default function ExerciseCard({
         onPress={onPress}>
             <View className='flex-row p-6'>
                 <View className='w-20 h-20 bg-white rounded-xl mr-4 overflow-hidden'>
-                    {item.image?(
+                    {item.image && item.image.asset?._ref?(
                         <Image
-                          source = {{ uri: urlFor(item.image?.asset?._ref).url()}}
+                          source={{ uri: urlFor(item.image.asset._ref).url() }}
                           className = "w-full h-full"
                           resizeMode = "contain"
                         />
-                    ):(
-                        <View className='"w-full h-full bg-gradient-to-br from-blue-400, to purple-500 item-center justify-center"
-                        />
-                        <Iconicons name = "fitness" size= {24}
+                    ):
+                    (
+                        <View className="w-full h-full bg-gradient-to-br from-blue-400 to purple-500 items-center justify-center"
+                        >
+                        <Ionicons name = "fitness" size= {24} color= "white"/>
+                        </View>
                     )}
-
                 </View>
-
+                <View className = "flex-1 justify-between">
+                    <View>
+                        <Text className= "text-lg font-bold text-gray-900 mb-1">
+                            {item.name}
+                        </Text>
+                        <Text className="text-sm text-gray-600 mb-2" numberOfLines={2}>
+                            {item.description || "No description available"}
+                        </Text>
+                    </View>
+                    <View className='flex-row items-center justify-between'>
+                        <View className={`px-3 py-1 rounded-full ${getDifficulyColor(item.difficulty || 'beginner')}`}>
+                            <Text className='text-xs font-semibold text-white'>
+                                {getDifficultyText(item.difficulty || 'beginner')}
+                            </Text>
+                        </View>
+                        {showChevron && (
+                            <TouchableOpacity className="p-2">
+                                <Ionicons name='chevron-forward' size={20} color="#687280"/>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
             </View>
       <Text>ExerciseCard</Text>
     </TouchableOpacity>
