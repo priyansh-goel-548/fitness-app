@@ -8,6 +8,11 @@ import { client } from '@/src/lib/sanity/client'
 import ExerciseCard from '../../components/ExerciseCard'
 import { Exercise } from '@/sanity/sanity.types';
 
+interface ExerciseWithDetails extends Exercise {
+  title?: string;
+  description?: string;
+}
+
 export const exercisesQuery = defineQuery(`*[_type == "exercise"]{
   _id,
   title,
@@ -16,8 +21,8 @@ export const exercisesQuery = defineQuery(`*[_type == "exercise"]{
 
 export default function Exercises() {
   const [searchQuery, setSearchQuery] = useState('')
-  const [exercises, setExercises] = useState<Exercise[]>([])
-  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([])
+  const [exercises, setExercises] = useState<ExerciseWithDetails[]>([])
+  const [filteredExercises, setFilteredExercises] = useState<ExerciseWithDetails[]>([])
   const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
 
@@ -38,8 +43,8 @@ export default function Exercises() {
   }, []);
 
   useEffect(() => {
-    const filtered = exercises.filter((exercise: Exercise) => 
-      (exercise as any)?.title?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = exercises.filter((exercise: ExerciseWithDetails) => 
+      exercise.title?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false
     );
     setFilteredExercises(filtered);
   }, [searchQuery, exercises])
@@ -83,7 +88,7 @@ export default function Exercises() {
         contentContainerStyle={{ padding: 24 }}
         renderItem={({item}) => (
           <ExerciseCard item = {item}
-          onPress={() => router.push({ pathname: '(app)/exercise-detail', query: { id: item._id } })}
+          onPress={() => router.push(`./exercise-detail?id=${item._id}`)}
           />
         )}
         refreshControl={
