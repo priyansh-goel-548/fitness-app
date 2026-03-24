@@ -1,4 +1,4 @@
-import { View, Text, StatusBar, TouchableOpacity, ScrollView, Image} from 'react-native'
+import { View, Text, StatusBar, TouchableOpacity, ScrollView, Image, ActivityIndicator} from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -10,6 +10,33 @@ import { defineQuery } from "groq"
 const singleExerciseQuery = defineQuery(
     `*[_type == "exercise" && _id == $id][0]`
 )
+
+const getDifficultyColor = (difficulty:string) => {
+    switch(difficulty){
+        case "beginner":
+            return "bg-green-500";
+        case "intermediate":
+            return "bg-yellow-500";
+        case "advanced":
+            return "bg-red-500";
+        default:
+            return "bg-gray-500";
+    }
+};
+
+const getDifficultyText = (difficulty: string) => {
+    switch(difficulty){
+        case "beginner":
+            return "Beginner";
+        case "intermediate":
+            return "Intermediate";
+        case "advanced":
+            return "Advanced";
+        default:
+            return "Unknown";
+    }
+};
+
 
 export default function ExerciseDetail() {
     const router = useRouter();
@@ -37,6 +64,36 @@ export default function ExerciseDetail() {
 
         fetchExercise();
     }, [id]);
+
+    //dummy function
+    const getAiGuidance = async () => {};
+    if(loading){
+        return(
+            <SafeAreaView className='flex-1 bg-white'>
+                <View className='flex-1 items-center justify-center'>
+                    <ActivityIndicator size= "large" color="#0000ff" />
+                    <Text className='text-gray-500 '>Loading exercise ...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if(!exercise){
+        return(
+            <SafeAreaView className="flex-1 bg-white">
+                <View className="flex-1 item-center justify-center" >
+                    <Text className='text-gray-500'>Exercise not found: {id}</Text>
+                    <TouchableOpacity
+                    onPress={() => router.back()}
+                    className='mt-4 bg-blue-500 px-6 py-3 rounded-lg'>
+                        <Text className='text-white font-semibold'>
+                            Go Back
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
   return (
     <SafeAreaView className='flex-1 bg-white'>
@@ -69,6 +126,69 @@ export default function ExerciseDetail() {
                 )}
                 {/* Gradient Overlay*/}
                 <View className='absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/60 to-transparent'/>
+            </View>
+            {/*Content*/}
+            <View className='px-6 py-6'>
+                {/*Title and difficulty */}
+                <View className='flex-row item-start justify-between mb-4'>
+                    <View className='flex-1 mr-4'>
+                        <Text className='text-3xl font-bold text-gray-800 mb-2'>
+                            {exercise?.name}
+                        </Text>
+                        <View className={`self-start px-4 py-2 rounded-full ${getDifficultyColor(
+                            exercise?.difficulty || "No description available"
+                        )}`}>
+                                <Text className="text-sm px-4 py-2 rounded-full">
+                                    {getDifficultyText(exercise?.difficulty || "No description available" )}
+                                </Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/*Description*/}
+                <View className='mb-6'>
+                    <Text className='text-xl font-semibold text-gray-800 mb-3'>
+                        Description
+                    </Text>
+                    <Text className='text-gray-600 leading-6 text-base'>
+                        {exercise?.description || "No description available"}
+                    </Text>
+                </View>
+
+                {/*AI Guidance */}
+
+                {/*Action buttons */}
+                <View className='mt-8 gap-2'>
+                    {/*AI Coach Button */}
+                    <TouchableOpacity
+                    className={`rounded-xl py-4 items-center ${
+                        aiLoading
+                            ? "bg-gray-400" : aiGuidance
+                            ? "bg-green-500"
+                            : "bg-blue-500"
+                    }`}
+                    onPress={getAiGuidance}
+                    disabled = {aiLoading}
+                    >
+
+                    {aiLoading ? (
+                        <View className='flex-row items-center'>
+                            <ActivityIndicator size = "small" color="white"/>
+                            <Text className='text-white font-bold text-lg ml-2'>Loading...</Text>
+                        </View>
+                    ):(
+                        <Text>{aiGuidance? "Refresh AI Guidance"
+                            :"Get AI Guidance on form & technique"
+                        }</Text>
+                    )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                    className='bg-gray-200 rounded-xl py-4 items-center'
+                    onPress={() => router.back()}>
+                        <Text className='text-gray-800 font-bold text-lg'>close</Text>
+                    </TouchableOpacity>
+
+                </View>
             </View>
       </ScrollView>
     </SafeAreaView>

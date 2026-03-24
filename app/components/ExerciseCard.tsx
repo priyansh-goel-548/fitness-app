@@ -5,7 +5,7 @@ import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { urlFor } from '../../src/lib/sanity/client';
 
-const getDifficulyColor = (difficulty:string) => {
+const getDifficultyColor = (difficulty:string) => {
     switch(difficulty){
         case "beginner":
             return "bg-green-500";
@@ -29,7 +29,7 @@ const getDifficultyText = (difficulty: string) => {
         default:
             return "Unknown";
     }
-}
+};
 
 interface ExerciseCardProps {
     item: Exercise;
@@ -71,7 +71,7 @@ export default function ExerciseCard({
                         </Text>
                     </View>
                     <View className='flex-row items-center justify-between'>
-                        <View className={`px-3 py-1 rounded-full ${getDifficulyColor(item.difficulty || 'beginner')}`}>
+                        <View className={`px-3 py-1 rounded-full ${getDifficultyColor(item.difficulty || 'beginner')}`}>
                             <Text className='text-xs font-semibold text-white'>
                                 {getDifficultyText(item.difficulty || 'beginner')}
                             </Text>
