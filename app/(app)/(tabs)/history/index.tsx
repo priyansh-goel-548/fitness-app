@@ -8,6 +8,7 @@ import { router, useLocalSearchParams, useRouter } from "expo-router";
 import { formatDuration } from "../../../lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import exercise from "@/sanity/schemaTypes/exercise";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 export const getWorkoutsQuery = defineQuery(`*[_type == "workout" && userId == $userId] | order(date desc) {
   _id,
@@ -21,7 +22,7 @@ export const getWorkoutsQuery = defineQuery(`*[_type == "workout" && userId == $
   sets[]{
   weight,
   reps,
-  weightUnit
+  weightUnit,
   _type,
   _key
   },
@@ -93,9 +94,9 @@ export default function HistoryPage() {
       return formatDuration(seconds);
     };
 
-    const getTotalSets = (workout: getWorkoutsQuery[number]) => {
-      return workout.exercises?.reduce((total, exercise) => total + (exercise.sets?.length || 0), 0) || 0;
-    };
+    // const getTotalSets = (workout: getWorkoutsQuery[number]) => {
+    //   return workout.exercises?.reduce((total, exercise) => total + (exercise.sets?.length || 0), 0) || 0;
+    // };
 
     const getExerciseNames = (workout: getWorkoutsQuery[number]) => {
       return (workout.exercises?.map((ex) => ex.exercises?.name).filter(Boolean) || []);    
@@ -149,7 +150,7 @@ export default function HistoryPage() {
                   </View>
                 ) : (
                   <View className="space-y-4 gap-4">
-                    {workouts.map((workout) => (
+                    {workouts.map((workout: getWorkoutsQuery[number]) => (
                       <TouchableOpacity key={workout._id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
                       activeOpacity={0.7}
                       onPress={() => {
@@ -192,6 +193,30 @@ export default function HistoryPage() {
                             </View>
                           </View>
                         </View>
+
+                        {/*Workout list */}
+                        {workout.exercises && workout.exercises.length > 0 && (
+                          <View>
+                            <Text className="text-sm font-medium text-gray-700 mb-2">
+                              Exercises:
+                            </Text>
+                            <View className="flex-row flex-wrap">
+                              {getExerciseNames(workout)
+                              .slice(0, 3)
+                              .map((name, index) => (
+                                <View key={index} className="bg-blue-50 rounded-lg  px-3 py-1 mr-2 mb-2">
+                                  <Text className="text-sm text-blue-700 font-medium">{name}</Text>
+                                </View>
+                              ))}
+                              {getExerciseNames(workout).length > 3 && (
+                                <View className="bg-gray-100 rounded-lg  px-3 py-1 mr-2mb-2 ">
+                                  <Text className="text-sm text-gray-600 font-medium">+{getExerciseNames(workout).length - 3} more 
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                         )}
                       </TouchableOpacity>
                     ))}
                   </View>
