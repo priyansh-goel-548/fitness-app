@@ -1,15 +1,52 @@
 import React from 'react'
-import { SafeAreaView} from 'react-native-safe-area-context'
-import { Platform, StatusBar, Text, TouchableOpacity, View} from 'react-native'
+import { Platform, StatusBar, Text, TouchableOpacity, View, Alert} from 'react-native'
 import { useStopwatch } from 'react-timer-hook';
-import { Ionicons } from '@expo/vector-icons';
+import { useWorkoutStore } from '@/store/workout-store';
+import { useFocusEffect, useRouter } from '@/.expo/types/router';
 
 function ActiveWorkout() {
 
+  const {
+    workoutExercises,
+    setWorkoutExercises,
+    weightUnit,
+    setWeightUnit,
+    resetWorkout,
+   } = useWorkoutStore();
+
+   const router = useRouter();
+
+   // Stopwatch state and functions
   const { seconds, minutes, hours, totalSeconds, reset } = useStopwatch({ autoStart: true });
+
+//Reset timer when workout exercises are reset
+useFocusEffect(
+  React.useCallback(() => {
+    //Only reset if there are no exercises, (indicates a fresh start after ending the workout)
+    if (workoutExercises.length === 0) {
+      reset();
+    }
+  }, [workoutExercises.length, reset])
+);
 
   const getWorkoutDuration = () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const cancelworkout = () => {
+    Alert.alert(
+      "Cancel Workout",
+      "Are you sure you want to cancel this workout? All progress will be lost.",
+      [
+        { text: "No", style: "cancel" },
+        { text: "End Workout",
+          onPress: () => {
+            resetWorkout();
+            router.back();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -61,6 +98,8 @@ function ActiveWorkout() {
               </View>
             </View>
           </View>
+
+          
         </View>
     </View>
   )
