@@ -1,10 +1,12 @@
 import React, {useState}from 'react'
-import { Platform, StatusBar, Text, TouchableOpacity, View, Alert, KeyboardAvoidingView, ScrollView} from 'react-native'
+import { Platform, StatusBar, Text, TouchableOpacity, View, Alert, KeyboardAvoidingView, ScrollView,TextInput} from 'react-native'
 import { useStopwatch } from 'react-timer-hook';
 import { useWorkoutStore } from '@/store/workout-store';
 import { useFocusEffect, useRouter } from '@/.expo/types/router';
 import { Ionicons } from '@expo/vector-icons';
 import ExerciseSelectionModal from '../../components/ExerciseSelectionModal';
+import { WorkoutSet } from '@/store/workout-store';
+import Exercises from './exercises';
 
 function ActiveWorkout() {
   const [showExerciseSelection, setShowExerciseSelection] = useState(false);
@@ -55,6 +57,49 @@ useFocusEffect(
     setShowExerciseSelection(true);
   };
 
+  const deleteExercise= (id: string) => {
+  }
+
+  const addNewSet = (exerciseId: string) => {
+    const newSet: WorkoutSet = {
+      id: Math.random().toString(),
+      reps: "",
+      weight: "",
+      weightUnit: weightUnit,
+      isCompleted: false,
+    };
+
+    setWorkoutExercises((exercises) =>
+     exercises.map((exercise) => 
+        exercise.id === exerciseId
+          ?{...exercise, sets: [...exercise.sets, newSet]}
+          : exercise
+        )
+      );
+  };
+
+  const updateSet = (
+    exerciseId: string,
+    setId: string,
+    field: "reps" | "weight",
+    value: string
+  ) => {
+    setWorkoutExercises((exercises) => 
+      exercises.map((exercise) => 
+        exercise.id === exerciseId
+          ? {
+            ...exercise,
+            sets: exercise.sets.map((set) =>
+              set.id === setId ? { ...set, [field]: value } : set
+            ),
+          }
+          : exercise
+      )
+    );
+  };
+
+
+
   return (
     <View className='flex-1'>
       <StatusBar barStyle="light-content" backgroundColor="#1F2937"/>
@@ -75,8 +120,6 @@ useFocusEffect(
                   {getWorkoutDuration()}
                 </Text>
               </View>
-
-
               <View className='flex-row items-center space-x-3 gap-2'>
 
                 {/* Weight unit toggle */}
@@ -139,6 +182,114 @@ useFocusEffect(
                   <View key={exercise.id} className='mb-8'>
 
                     {/* Exercise Header */}
+                    <TouchableOpacity
+                    onPress={() => 
+                      router.push({
+                        pathname: "/exercise-detail",
+                        params: {
+                          id: exercise.sanityId,
+                        },
+                      })
+                    } 
+                    className='bg-blue-50 rounded-2xl p-4 mb-3'
+                    >
+                      <View className='flex-row items-center justify-between'>
+                        <View className='flex-1'>
+                          <Text className='text-xl font-bold text-gray-900 mb-2'>
+                            {exercise.name}
+                          </Text>
+                          <Text className='text-gray-600'>
+                            {exercise.sets.length} sets 
+                            {exercise.sets.filter((set) => set.isCompleted).length} {" "}
+                            completed
+                          </Text>
+                        </View>
+
+                        {/*Delete exercise button */}
+                        <TouchableOpacity
+                        onPress={() => deleteExercise(exercise.id)}
+                        className='w-10 h-10 rounded-xl items-center justify-center bg-red-500 ml-3'>
+                          <Ionicons name="trash" size={16} color="white"/>
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/*Exercise Sets */}
+                    <View className='bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-3'>
+                      <Text className='text-lg font-semibold text-gray-900 mb-3'>
+                        Sets
+                      </Text>
+                      {exercise.sets.length ===0 ? (
+                        <Text className='text-gray-500 text-center py-4'>
+                          No sets yet, Add your first set below
+                        </Text>
+                      ):(
+                        exercise.sets.map((set, setIndex) =>(
+                          <View
+                          key = {set.id}
+                          className={`py-3 px-3 mb-2 rounded-xl border ${
+                            set.isCompleted
+                            ? "bg-green-100 border-green-300"
+                            : "bg-gray-50 border-gray-200"
+                          }`}>
+
+                            {/*First Row: Set number, Reps, Weight, Complete button, Delete button */}
+                            <View className='flex-row items-center justify-between'>
+                              <Text className='text-gray-700'>
+                                Set {setIndex +1}
+                              </Text>
+
+                              {/*Reps input*/}
+                              <View className='flex-1 mx-2'>
+                                <Text className='text-xs text-gray-500 mb-1'>Reps</Text>
+                                <TextInput
+                                  value={set.reps}
+                                  onChangeText = {(value) =>
+                                    updateSet(exercise.id, set.id, "reps", value)
+                                  }
+                                  placeholder="0"
+                                  keyboardType="numeric"
+                                  className={`border rounded-lg px-3 py-2 text-center ${
+                                    set.isCompleted
+                                      ?"bg-gray-100 border-gray-300 text-gray-500"
+                                      :"bg-white border-gray-300"
+                                  }`}
+                                  editable={!set.isCompleted}/>
+                              </View>
+
+                              {/*Weight Input */}
+                              <View className='flex-1 mx-2'>
+                                <Text className='text-xs text-gray-500 mb-1'>Weight ({weightUnit})</Text>
+                                <TextInput
+                                  value={set.weight}
+                                  onChangeText = {(value) =>
+                                    updateSet(exercise.id, set.id, "weight", value)
+                                  }
+                                  placeholder="0"
+                                  keyboardType="numeric"
+                                  className={`border rounded-lg px-3 py-2 text-center ${
+                                    set.isCompleted
+                                      ?"bg-gray-100 border-gray-300 text-gray-500"
+                                      :"bg-white border-gray-300"
+                                  }`}
+                                  editable={!set.isCompleted}/>
+                              </View>
+                            </View>
+                          </View>
+                      ))
+                    )}
+
+                    {/*Add New Set Button */}
+                    <TouchableOpacity 
+                    onPress={() => addNewSet(exercise.id)}
+                    className='bg-blue-300 rounded-lg py-3 items-center mt-2'>
+                      <View>
+                        <Ionicons name="add" size={16} color="#3B82F6" style={{ marginRight: 6}}/>
+                        <Text className='text-blue-600 font-medium'>Add Set</Text>
+                      </View>
+                       
+                    </TouchableOpacity>
+                    </View>
                     </View>
                 ))}
 
