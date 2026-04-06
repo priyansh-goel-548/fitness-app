@@ -1,9 +1,13 @@
-import { View, Text, Modal, StatusBar, TouchableOpacity, TextInput } from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, Modal, StatusBar, TouchableOpacity, TextInput, FlatList, RefreshControl } from 'react-native'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from '@/.expo/types/router';
 import { useWorkoutStore } from '@/store/workout-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import ExerciseCard from './ExerciseCard';
+import { Exercise } from '@/src/lib/sanity/types';
+import { exercisesQuery } from '../(app)/(tabs)/exercises';
+import { client } from '@/src/lib/sanity/client';
 
 interface ExerciseSelectionModalProps {
   isVisible: boolean;
@@ -17,7 +21,43 @@ export default function ExerciseSelectionModal({ isVisible, onClose }: ExerciseS
     const [exercises, setExercises] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredExercises, setFilteredExercises] = useState<any[]>([]);
-    const [rrefreshing, setRefreshing] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+
+    useEffect(() => {
+        if(isVisible){
+            fetchExercise();
+        }
+    }, [isVisible]);
+
+    useEffect(() => {
+        const filtered = exercises.filter((exercise) => exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredExercises(filtered);
+    }, [searchQuery, exercises]);
+
+    const fetchExercise = async () => {
+        try {
+            const exercises = await client.fetch(exercisesQuery);
+            setExercises(exercises);
+            setFilteredExercises(exercises)
+        } catch (error) {
+            console.error("Error fetching exercise:", error);
+        }
+    };
+
+    const handleExercisePress = (exercise: Exercise) => {
+        //Directly add exercise to workout
+        if (exercise._id && exercise.name) {
+            addExerciseToWorkout({ name: exercise.name, sanityId: exercise._id});
+            onClose();
+        }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchExercise();
+        setRefreshing(false);
+    }
 
   return (
     <Modal
@@ -61,6 +101,48 @@ export default function ExerciseSelectionModal({ isVisible, onClose }: ExerciseS
                     )}
                 </View>
             </View>
+
+            {/*Exercise List*/}
+            <FlatList
+            data={filteredExercises}
+            renderItem={({ item }) => (
+                <ExerciseCard
+                item={item}
+                onPress={() => handleExercisePress(item)}
+                showChevron={false}
+                />
+            )}
+            keyExtractor={(item) => item._id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+                paddingTop: 16,
+                paddingBottom: 32,
+                paddingHorizontal: 16,
+            }}
+            refreshControl={
+                <RefreshControl
+                refreshing ={refreshing}
+                onRefresh={onRefresh}
+                colors={["#3B82F6"]} //Android
+                tintColor="#3B82F6" //iOS
+                />
+            }
+            ListEmptyComponent={
+                <View className='flex-1 items-center justify-center py-20 '>
+                    <Ionicons name='fitness-outline' size={64} color="#D1D5DB"/>
+                    <Text className='text-lg font-semibold text-gray-400 mt-4'>
+                        {searchQuery
+                        ? "No exercises found"
+                        : "Loading Exercises..."}
+                    </Text>
+                    <Text className='text-sm text-gray-400 mt-2'>
+                        {searchQuery
+                        ? "Try adjusting your search"
+                        : "Please wait a moment"}
+                    </Text>
+                </View>
+            }
+            />
         </SafeAreaView>
     </Modal>
   )
