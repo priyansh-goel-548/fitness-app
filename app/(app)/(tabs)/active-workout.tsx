@@ -1,15 +1,28 @@
 import React, {useState}from 'react'
-import { Platform, StatusBar, Text, TouchableOpacity, View, Alert, KeyboardAvoidingView, ScrollView,TextInput} from 'react-native'
+import { Platform, StatusBar, Text, TouchableOpacity, View, Alert, KeyboardAvoidingView, ScrollView,TextInput, ActivityIndicator} from 'react-native'
 import { useStopwatch } from 'react-timer-hook';
 import { useWorkoutStore } from '@/store/workout-store';
 import { useFocusEffect, useRouter } from '@/.expo/types/router';
 import { Ionicons } from '@expo/vector-icons';
 import ExerciseSelectionModal from '../../components/ExerciseSelectionModal';
 import { WorkoutSet } from '@/store/workout-store';
+import { client } from '@/src/lib/sanity/client';
 import Exercises from './exercises';
+import { defineQuery } from 'groq';
+import { useUser } from '@clerk/clerk-expo'
+import { WorkoutData } from '@/app/api/save-workout+api';
 
+
+//Query to find exercise by name
+const findExerciseQuery = 
+  defineQuery(`*[_type == "Exercise" && name == $name][0]{
+    _id,
+    name
+  ]`)
 function ActiveWorkout() {
+  const { user } = useUser();
   const [showExerciseSelection, setShowExerciseSelection] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const {
     workoutExercises,
     setWorkoutExercises,
@@ -37,6 +50,122 @@ useFocusEffect(
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const endWorkout = async () => {
+    const saved = await saveWorkoutToDatabase();
+
+    if(saved) {
+      Alert.alert("Workout Saved", "Your workout has been saved successfully");
+      resetWorkout();
+
+      router.replace("/(app)/(tabs)/history?refresh=true");
+    }
+  };
+
+  const saveWorkoutToDatabase = async () => {
+    //Check if already saving to prevent multiple attempts
+    if (isSaving) return false;
+
+    setIsSaving(true);
+
+    try{
+      //implement saving 
+      //use stopwatch total seconds for duration
+      const durationInSeconds = totalSeconds;
+
+      //Transform exercises data to match Sanity schema
+      const exercisesForSanity = await Promise.all(
+        workoutExercises.map(async (exercise) => {
+          //Find exercise document in sanity by name
+          const exerciseDoc = await client.fetch(findExerciseQuery,{
+            name: exercise.name,
+          });
+
+          if(!exerciseDoc){
+            throw new Error(
+              `Exercise "${exercise.name}" not found in database`
+            );
+          }
+
+          //Transform sets to match schema (only completed sets, convert to numbers)
+          const setsForSanity = exercise.sets
+            .filter((set) => set.isCompleted && set.reps && set.weight)
+            .map((set) => ({
+              _type: "set",
+              _key: Math.random().toString(36).substr(2,9),
+              reps: parseInt(set.reps, 10) || 0,
+              weight: parseFloat (set.weight) ||0,
+              weightUnit: set.weightUnit,
+            }));
+
+          return{
+            _type: "workoutExercise",
+            _key: Math.random().toString(36).substr(2,9),
+            exercise: {
+              _type: "reference",
+              _ref: exerciseDoc._id,
+            },
+            sets:setsForSanity,
+          };
+        })
+      );
+
+      //Filter out exercise with no completed sets
+      const validExercises = exercisesForSanity.filter(
+        (exercise) => exercise.sets.length > 0 
+      );
+
+      if(validExercises.length === 0){
+        Alert.alert(
+          "No Completed Sets",
+          "Please complete at least one set before saving the workout."
+        );
+        return false;
+      }
+
+      //Create the workout document
+      if (!user) {
+        Alert.alert("User Error", "User information is not available. Please try again.");
+        return false;
+      }
+
+      const workoutData: WorkoutData = {
+        _type: "workout",
+        userId: user.id,
+        data: new Date().toISOString(),
+        duration: durationInSeconds,
+        exercise: validExercises,
+      }
+
+      //Save to sanity via API
+      const result = await fetch("/api/save-workout", {
+        method: "POST",
+        body: JSON.stringify({workoutData}),
+      });
+
+      console.log("Workout saved successfully", result);
+      return true;
+
+    }catch (error) {
+      console.error("Error saving workout:", error);
+      Alert.alert("Save Failed", "Failed to save workout.Please try again.");
+      return false;
+    }finally{
+      setIsSaving(false);
+    }
+  }
+
+  const saveWorkout = () => {
+    //are u sure u want to complete workout?
+    Alert.alert(
+      "Complete Workout",
+      "Are u sure u want to complete the workout",
+      [
+        { text: "Cancel", style: "cancel"},
+        { text: "Complete", onPress: async() => await endWorkout() },
+      ]
+    );
+  };
+
   const cancelworkout = () => {
     Alert.alert(
       "Cancel Workout",
@@ -57,8 +186,11 @@ useFocusEffect(
     setShowExerciseSelection(true);
   };
 
-  const deleteExercise= (id: string) => {
-  }
+  const deleteExercise= (exerciseId: string) => {
+    setWorkoutExercises((exercises) => 
+      exercises.filter((exercise) => exercise.id !== exerciseId)
+    );
+  };
 
   const addNewSet = (exerciseId: string) => {
     const newSet: WorkoutSet = {
@@ -98,7 +230,35 @@ useFocusEffect(
     );
   };
 
+  const toggleSetCompletion = (exerciseId: string, setId: string) => {
+    setWorkoutExercises((exercises) => 
+    exercises.map((exercise) => 
+    exercise.id === exerciseId
+      ?{
+        ...exercise,
+        sets: exercise.sets.map((set) => 
+          set.id === setId
+              ? {...set, isCompleted: !set.isCompleted}
+              : set
+            ),
+      }
+    :exercise
+  )
+);
+};
 
+const deleteSet = (exerciseId: string, setId: string) => {
+  setWorkoutExercises((exercises) => 
+    exercises.map((exercise) => 
+      exercise.id === exerciseId
+        ? {
+          ...exercise,
+          sets: exercise.sets.filter((set) => set.id !== setId), 
+        }
+      :exercise
+    )
+  );
+};
 
   return (
     <View className='flex-1'>
@@ -111,7 +271,6 @@ useFocusEffect(
         }}/>
 
           {/*Header */}
-
           <View className = "bg-gray-800 px-6 py-4">
             <View className='flex-row items-center justify-between'>
               <View>
@@ -185,7 +344,7 @@ useFocusEffect(
                     <TouchableOpacity
                     onPress={() => 
                       router.push({
-                        pathname: "/exercise-detail",
+                        pathname: "/(app)/(tabs)/exercises",
                         params: {
                           id: exercise.sanityId,
                         },
@@ -274,6 +433,25 @@ useFocusEffect(
                                   }`}
                                   editable={!set.isCompleted}/>
                               </View>
+
+                              {/*Complete Button*/}
+                              <TouchableOpacity
+                              onPress={() => 
+                                toggleSetCompletion(exercise.id, set.id)
+                              }
+                              className={`w-12 h-12 rounded-xl items-center justify-center mx-1 ${
+                                set.isCompleted ? "bg-green-500" : "bg-gray-200"
+                              }`}>
+                                <Ionicons name = {set.isCompleted ? "checkmark" : "checkmark-outline"}  
+                                size ={20} color={set.isCompleted ? "white" : "#9CA3AF"} />
+                              </TouchableOpacity>
+
+                              {/*Delete Button*/}
+                              <TouchableOpacity
+                              onPress={() => deleteSet(exercise.id, set.id)}
+                              className='w-12 h-12 rounded-xl items-center justify-center bg-red-500 ml-1'>
+                                <Ionicons name="trash" size = {16} color = "white"/>
+                              </TouchableOpacity>
                             </View>
                           </View>
                       ))
@@ -305,6 +483,31 @@ useFocusEffect(
                     Add Exercise
                   </Text>
                 </View>
+                </TouchableOpacity>
+
+                {/*Completion Button */}
+                <TouchableOpacity
+                onPress={saveWorkout}
+                className={`rounded-2xl py-4 items-center mb-8 ${
+                  isSaving || workoutExercises.length === 0 || workoutExercises.some((exercise) => exercise.sets.some((set) => !set.isCompleted))
+                  ? "bg-gray-400"
+                  : "bg-green-600 active:bg-green-700"
+                }`}
+                disabled={
+                  isSaving || workoutExercises.length === 0 || workoutExercises.some((exercise) => exercise.sets.some((set) => !set.isCompleted))
+                }>
+                  {isSaving ? (
+                    <View>
+                      <ActivityIndicator size="small" color = "white"/>
+                      <Text className='text-white font-semibold text-lg ml-2'>
+                        Saving... 
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text className='text-white font-semibold text-lg'>
+                      Complete Workout
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </ScrollView>
             </KeyboardAvoidingView>
